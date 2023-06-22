@@ -1,6 +1,10 @@
 #!/usr/bin/python3
 ''' script that starts a Flask web application '''
 from flask import Flask, escape, render_template
+from models import storage
+from models.base_model import os_type_storage
+
+from models.state import State
 app = Flask(__name__)
 
 
@@ -46,6 +50,46 @@ def number_template(n):
         renders an tml template
     '''
     return render_template('5-number.html', n=n)
+
+
+@app.route('/number_odd_or_even/<int:n>/', strict_slashes=False)
+def number_odd_or_even(n):
+    ''' renders a message with a q param
+        and displays value only if n is an integer
+        renders an tml template
+    '''
+    return render_template('6-number_odd_or_even.html', n=n)
+
+
+@app.route('/states_list/', strict_slashes=False)
+def states_list():
+    ''' displays a list of all State
+        objects present in DBStorage sorted by name
+        renders an html template
+    '''
+    states_objs = storage.all('State').values()
+    return render_template('7-states_list.html', states=states_objs)
+
+
+@app.route('/cities_by_states', strict_slashes=False)
+def cities_by_states():
+    ''' displays a list of all State
+        objects present in DBStorage
+        or FileStorage
+        sorted by name
+        renders an html template
+    '''
+    if os_type_storage == 'db':
+        states_objs = storage.all('State').values()
+    else:
+        states_objs = storage.all(State).values()
+    return render_template('8-cities_by_states.html', states=states_objs)
+
+
+@app.teardown_appcontext
+def close_session_db(exit):
+    ''' remove the current SQLAlchemy Session '''
+    storage.close()
 
 
 if __name__ == "__main__":
