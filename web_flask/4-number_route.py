@@ -1,42 +1,43 @@
 #!/usr/bin/python3
-"""A script that starts a Flask web application"""
-from flask import Flask
-
+''' script that starts a Flask web application '''
+from flask import Flask, escape
 app = Flask(__name__)
 
 
-@app.route("/", strict_slashes=False)
-def display_hello():
-    """Prints hello hbnb"""
+@app.route('/', strict_slashes=False)
+def hello_route():
+    ''' renders a message '''
     return "Hello HBNB!"
 
 
-@app.route("/hbnb", strict_slashes=False)
-def desplay_hbnb():
-    """Print hbnb"""
+@app.route('/hbnb', strict_slashes=False)
+def hbnb():
+    ''' renders a message '''
     return "HBNB"
 
 
-@app.route("/c/<text>", strict_slashes=False)
-def display_cText(text):
-    """Print C with passed variable"""
-    text = text.replace("_", " ")
-    return "C %s" % (text)
+@app.route('/c/<text>', strict_slashes=False)
+def c_param(text):
+    ''' renders a message with a q param '''
+    return "C %s" % escape(text.replace('_', ' '))
 
 
-@app.route('/python/', strict_slashes=False)
-@app.route('/python/<text>', strict_slashes=False)
-def display_pythonText(text='is cool'):
-    """ Function called with /python/<text> route """
-    if text != 'is cool':
-        text = text.replace('_', ' ')
-    return 'Python %s' % (text)
+@app.route('/python/', defaults={'text': 'is_cool'})
+@app.route('/python/<text>/', strict_slashes=False)
+def python_param(text):
+    ''' renders a message with a q param
+        and defaults value
+    '''
+    return "Python %s" % escape(text.replace('_', ' '))
 
 
-@app.route('/number/<int:n>', strict_slashes=False)
-def display_if_int(n):
-    return '%d is a number' % (n)
+@app.route('/number/<int:n>/', strict_slashes=False)
+def number_param(n):
+    ''' renders a message with a q param
+        and displays value only if n is an integer
+    '''
+    return "%d is a number" % n
 
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+if __name__ == "__main__":
+    app.run(host='0.0.0.0')
