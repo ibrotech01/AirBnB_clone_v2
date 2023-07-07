@@ -1,45 +1,57 @@
 #!/usr/bin/python3
-""""Fabric script that distributes an archive to web servers"""
-
+"""
+a Fabric script that generates a .tgz archive
+from the contents of the web_static folder of the AirBnB Clone repo
+"""
+from fabric.operations import local, put, run
+from datetime import datetime as d
 from fabric.api import *
-import os
 
-env.hosts = ['3.235.198.120', '3.239.50.204']
+env.hosts = ['34.74.120.150', '54.173.196.75']
+
+
+def do_pack():
+    """ generates a .tgz archive """
+    name = "versions/web_static_" + str(d.now().year)
+    name += str(d.now().month) + str(d.now().day) + str(d.now().hour)
+    name += str(d.now().minute) + str(d.now().second) + ".tgz"
+    result = local("mkdir -p versions; tar -cvzf \"%s\" web_static" % name)
+    if result.failed:
+        return NULL
+    else:
+        return name
 
 
 def do_deploy(archive_path):
-    """Archive distributor"""
-    try:
-        try:
-            if os.path.exists(archive_path):
-                arc_tgz = archive_path.split("/")
-                arg_save = arc_tgz[1]
-                arc_tgz = arc_tgz[1].split('.')
-                arc_tgz = arc_tgz[0]
-
-                """Upload archive to the server"""
-                put(archive_path, '/tmp')
-
-                """Save folder paths in variables"""
-                uncomp_fold = '/data/web_static/releases/{}'.format(arc_tgz)
-                tmp_location = '/tmp/{}'.format(arg_save)
-
-                """Run remote commands on the server"""
-                run('mkdir -p {}'.format(uncomp_fold))
-                run('tar -xvzf {} -C {}'.format(tmp_location, uncomp_fold))
-                run('rm {}'.format(tmp_location))
-                run('mv {}/web_static/* {}'.format(uncomp_fold, uncomp_fold))
-                run('rm -rf {}/web_static'.format(uncomp_fold))
-                run('rm -rf /data/web_static/current')
-                run('ln -sf {} /data/web_static/current'.format(uncomp_fold))
-                run('sudo service nginx restart')
-                return True
-            else:
-                print('File does not exist')
-                return False
-        except Exception as err:
-            print(err)
-            return False
-    except Exception:
-        print('Error')
+    """ uploads the archive to servers """
+    destination = "/tmp/" + archive_path.split("/")[-1]
+    result = put(archive_path, "/tmp/")
+    if result.failed:
         return False
+    filename = archive_path.split("/")[-1]
+    f = filename.split(".")[0]
+    directory = "/data/web_static/releases/" + f
+    run_res = run("mkdir -p \"%s\"" % directory)
+    if run_res.failed:
+        return False
+    run_res = run("tar -xzf %s -C %s" % (destination, directory))
+    if run_res.failed:
+        return False
+    run_res = run("rm %s" % destination)
+    if run_res:
+        return False
+    web = directory + "/web_static/*"
+    run_res = run("mv %s %s" % (web, directory))
+    if run_res.failed:
+        return False
+    web = web[0:-2]
+    run_res = run("rm -rf %s" % web)
+    if run_res.failed:
+        return False
+    run_res = run("rm -rf /data/web_static/current")
+    if run_res.failed:
+        return False
+    run_res = run("ln -s %s /data/web_static/current" % directory)
+    if run_res.failed:
+        return False
+    return True
