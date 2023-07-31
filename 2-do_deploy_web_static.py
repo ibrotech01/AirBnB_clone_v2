@@ -1,36 +1,52 @@
 #!/usr/bin/python3
 """
-Fabric script method:
-    do_deploy: deploys archive to webservers
-Usage:
-    fab -f 2-do_deploy_web_static.py
-    do_deploy:archive_path=versions/web_static_20170315003959.tgz
-    -i my_ssh_private_key -u ubuntu
+Fabric script that distributes an archive to your web servers
 """
-from fabric.api import env, put, run
-import os.path
-env.hosts = ['35.229.54.225', '35.231.225.251']
+
+from datetime import datetime
+from fabric.api import *
+import os
+
+env.hosts = ["52.91.121.146", "3.85.136.181"]
+env.user = "ubuntu"
+
+
+def do_pack():
+    """
+        return the archive path if archive has generated correctly.
+    """
+
+    local("mkdir -p versions")
+    date = datetime.now().strftime("%Y%m%d%H%M%S")
+    archived_f_path = "versions/web_static_{}.tgz".format(date)
+    t_gzip_archive = local("tar -cvzf {} web_static".format(archived_f_path))
+
+    if t_gzip_archive.succeeded:
+        return archived_f_path
+    else:
+        return None
 
 
 def do_deploy(archive_path):
     """
-    Deploy archive to web server
+        Distribute archive.
     """
-    if os.path.isfile(archive_path) is False:
-        return False
-    try:
-        filename = archive_path.split("/")[-1]
-        no_ext = filename.split(".")[0]
-        path_no_ext = "/data/web_static/releases/{}/".format(no_ext)
-        symlink = "/data/web_static/current"
+    if os.path.exists(archive_path):
+        archived_file = archive_path[9:]
+        newest_version = "/data/web_static/releases/" + archived_file[:-4]
+        archived_file = "/tmp/" + archived_file
         put(archive_path, "/tmp/")
-        run("mkdir -p {}".format(path_no_ext))
-        run("tar -xzf /tmp/{} -C {}".format(filename, path_no_ext))
-        run("rm /tmp/{}".format(filename))
-        run("mv {}web_static/* {}".format(path_no_ext, path_no_ext))
-        run("rm -rf {}web_static".format(path_no_ext))
-        run("rm -rf {}".format(symlink))
-        run("ln -s {} {}".format(path_no_ext, symlink))
+        run("sudo mkdir -p {}".format(newest_version))
+        run("sudo tar -xzf {} -C {}/".format(archived_file,
+                                             newest_version))
+        run("sudo rm {}".format(archived_file))
+        run("sudo mv {}/web_static/* {}".format(newest_version,
+                                                newest_version))
+        run("sudo rm -rf {}/web_static".format(newest_version))
+        run("sudo rm -rf /data/web_static/current")
+        run("sudo ln -s {} /data/web_static/current".format(newest_version))
+
+        print("New version deployed!")
         return True
-    except:
-        return False
+
+    return False
